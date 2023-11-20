@@ -1,2 +1,2 @@
-# topdesk-api-python
-Topdesk API wrapper for Python
+# TOPdesk-api-python
+TOPdesk API wrapper for Python
