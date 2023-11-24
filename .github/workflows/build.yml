@@ -10,12 +10,9 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  Check:
 
     runs-on: ubuntu-latest
-    environment:
-      name: testpypi
-      url: https://pypi.org/p/<your-pypi-project-name>
 
     steps:
     - uses: actions/checkout@v3
@@ -36,6 +33,11 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=11 --max-line-length=99 --statistics
     - name: Build package
       run: python -m build
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
   
   pypi-publish:
     name: Upload release to PyPI
