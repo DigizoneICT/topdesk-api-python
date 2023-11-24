@@ -43,7 +43,7 @@ jobs:
     needs: build
     environment:
       name: testpypi
-      url: https://pypi.org/p/topdesk-api-python
+      url: https://test.pypi.org/p/topdesk-api-python
     permissions:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
