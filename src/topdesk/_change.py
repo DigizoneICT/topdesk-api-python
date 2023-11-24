@@ -12,7 +12,7 @@ class change:
         return self.utils.handle_topdesk_response(
                 self.utils.request_topdesk("/tas/api/operatorChanges/{}".format(id)))
 
-    def get_list(self, page_size=1000, query=None, fields=None):
+    def get_list(self, archived=None, page_size=1000, query=None, templateId=None, fields=None):
         return self.utils.handle_topdesk_response(
                 self.utils.request_topdesk("/tas/api/operatorChanges/", page_size, query, fields))
 
