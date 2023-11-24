@@ -1,5 +1,10 @@
-import json, string, re, requests, urllib.parse
+import json
 import logging
+import re
+import requests
+import string
+import urllib.parse
+
 
 class utils:
 
@@ -10,7 +15,7 @@ class utils:
 
     def is_valid_uuid(self, uuid):
         return re.match(r"^[0-9a-g]{8}-([0-9a-g]{4}-){3}[0-9a-g]{12}$", uuid)
- 
+
     def is_valid_email_addr(self, email_addr):
         return re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email_addr)
 
@@ -19,12 +24,12 @@ class utils:
             return possible_canidates[0]
         elif len(possible_canidates) > 1:
             print("To many canidates: " + "; ".join(possible_canidates))
-            return 
+            return
         else:
             print("No canidates found.")
             return
 
-    def handle_topdesk_response(self, response):        
+    def handle_topdesk_response(self, response):
         logging.debug(response.status_code)
         if response.status_code == 200 or response.status_code == 201:
             # response = response.json()
@@ -32,42 +37,43 @@ class utils:
                 if response.text == "":
                     return "Success"
                 else:
-                    
-                    
                     if "dataSet" in response.json():
                         return response.json()["dataSet"]
                     else:
                         return json.loads(response.content.decode('utf-8'))
-                    
-                    #return json.loads(response.content.decode('utf-8'))
+
+                    # return json.loads(response.content.decode('utf-8'))
             else:
                 self._partial_content_container.extend(response.json()["dataSet"])
                 placeHolder = self._partial_content_container
                 self._partial_content_container = []
                 return placeHolder
         elif response.status_code == 404:
-            logging.error ("status_code {}, message: {}".format('404', 'Not Found'))
+            logging.error("status_code {}, message: {}".format('404', 'Not Found'))
             return
         elif response.status_code == 204:
-            logging.error ("status_code {}, message: {}".format('204', 'No content'))
+            logging.error("status_code {}, message: {}".format('204', 'No content'))
             return "success"
         elif response.status_code == 405:
-            logging.error ("status_code {}, message: {}".format('405', 'Method not allowed'))
+            logging.error("status_code {}, message: {}".format('405', 'Method not allowed'))
             return
         # Partial content returned.
         elif response.status_code == 206:
             # can we make this recursive?
             self._partial_content_container.extend(response.json()["dataSet"])
 
-            page_size = int(re.findall(r'page_size=(\d+)', response.url)[0])   # Page size none crashes here.
+            # Page size none crashes here.
+            page_size = int(re.findall(r'page_size=(\d+)', response.url)[0])
             if 'pageStart=' in response.url:
                 # Start allready in url replace value.
                 current_start = int(re.findall(r'pageStart=(\d+)', response.url)[0])
                 self.new_start = page_size + current_start
-                partial_new_url = re.sub(r'pageStart=(\d+)', 'pageStart={}'.format(str(self.new_start)), response.url)
+                partial_new_url = re.sub(r'pageStart=(\d+)', 'pageStart={}'.format(
+                                    str(self.new_start)), response.url)
             else:
                 # start= not yet present in URL. insert it.
-                partial_new_url = re.sub(r'(page_size=\d+)', r'\1&pageStart={}'.format(str(page_size)), response.url)                
+                partial_new_url = re.sub(r'(page_size=\d+)', r'\1&pageStart={}'.format(
+                                    str(page_size)), response.url)
             # Remove base url
             partial_new_url = partial_new_url.replace(self._topdesk_url, "")
             return self.handle_topdesk_response(self.request_topdesk(partial_new_url))
@@ -78,15 +84,19 @@ class utils:
             status_code = response.status_code
             response = json.loads(response.content.decode('utf-8'))
             if 'errors' in response:
-                logging.error("status_code {}, message: {}".format(status_code, response['errors'][0]['message']))
+                logging.error("status_code {}, message: {}".format(
+                                status_code, response['errors'][0]['message']))
             else:
-                logging.error("status_code {}, message: {}".format(status_code, response[0]['message']))
-            
-            #return {"status_code" : status_code, "message" : response['errors'][0]['message']}
+                logging.error("status_code {}, message: {}".format(
+                                status_code, response[0]['message']))
+
+            # return {"status_code" : status_code, "message" : response['errors'][0]['message']}
             return
-    
-    def request_topdesk(self, uri, archived=None, page_size=None, query=None, templateId=None, fields=None, custom_uri=None, extended_uri=None):
-        headers = {'Authorization':"Basic {}".format(self._credpair), "Accept":'application/json'}
+
+    def request_topdesk(self, uri, archived=None, page_size=None, query=None, templateId=None,
+                        fields=None, custom_uri=None, extended_uri=None):
+        headers = {'Authorization': "Basic {}".format(self._credpair),
+                   'Accept': 'application/json'}
         if custom_uri:
             uri += urllib.parse.urlencode(custom_uri, quote_via=urllib.parse.quote_plus)
         else:
@@ -96,7 +106,8 @@ class utils:
                 uri += '&' if 'templateId' in uri else '?'
                 uri += "page_size={}".format(page_size)
             if extended_uri:
-                uri += "&" + urllib.parse.urlencode(extended_uri, quote_via=urllib.parse.quote_plus)
+                uri += "&" + urllib.parse.urlencode(extended_uri,
+                                                    quote_via=urllib.parse.quote_plus)
             if archived:
                 uri += '&' if 'page_size' in uri else '?'
                 uri += 'query=archived=={}'.format(archived)
@@ -104,7 +115,7 @@ class utils:
                 uri += '&' if 'page_size' in uri else '?'
                 uri += 'fields={}'.format(fields)
             if query:
-                #Some query param need to be URL encoded.
+                # Some query param need to be URL encoded.
                 query = urllib.parse.quote(query)
                 if ('query=' in uri):
                     uri += ';{}'.format(query)
@@ -117,20 +128,23 @@ class utils:
 
     def post_to_topdesk(self, uri, json_body):
         logging.debug(uri)
-        headers = {'Authorization':"Basic {}".format(self._credpair), "Accept":'application/json', \
-            'Content-type': 'application/json'}
+        headers = {'Authorization': "Basic {}".format(self._credpair),
+                   'Accept': 'application/json',
+                   'Content-type': 'application/json'}
         return requests.post(self._topdesk_url + uri, headers=headers, json=json_body)
 
     def put_to_topdesk(self, uri, json_body):
         logging.debug(uri)
-        headers = {'Authorization':"Basic {}".format(self._credpair), "Accept":'application/json', \
-            'Content-type': 'application/json'}
+        headers = {'Authorization': "Basic {}".format(self._credpair),
+                   'Accept': 'application/json',
+                   'Content-type': 'application/json'}
         return requests.put(self._topdesk_url + uri, headers=headers, json=json_body)
 
     def delete_from_topdesk(self, uri, json_body):
         logging.debug(uri)
-        headers = {'Authorization':"Basic {}".format(self._credpair), "Accept":'application/json', \
-            'Content-type': 'application/json'}
+        headers = {'Authorization': "Basic {}".format(self._credpair),
+                   'Accept': 'application/json',
+                   'Content-type': 'application/json'}
         return requests.delete(self._topdesk_url + uri, headers=headers, json=json_body)
 
     def add_id_list(self, id_list):
@@ -141,26 +155,26 @@ class utils:
 
     def add_id_jsonbody(self, **kwargs):
         request_body = {}
-        
+
         # args = posible caller
-        if 'caller' in kwargs:            
+        if 'caller' in kwargs:
             if self.is_valid_email_addr(kwargs['caller']):
                 caller_type = "email"
             elif self.is_valid_uuid(kwargs['caller']):
                 caller_type = "id"
             else:
                 caller_type = "dynamicName"
-            request_body['callerLookup'] = { caller_type: kwargs['caller']}
+            request_body['callerLookup'] = {caller_type: kwargs['caller']}
 
         for key in kwargs:
             if self.is_valid_uuid(str(kwargs[key])):
-                request_body[key] = { 'id' : kwargs[key] }
+                request_body[key] = {'id': kwargs[key]}
             else:
-                if key == 'caller': 
+                if key == 'caller':
                     continue
                 request_body[key] = kwargs[key]
         return request_body
-    
+
     def find_partial_match_company(self, data, partial):
         matching_data = []
         for item in data:
@@ -168,13 +182,14 @@ class utils:
             # Remove punctuation from name and partial
             name_no_punct = re.sub(r'[{}]'.format(string.punctuation), '', name)
             partial_no_punct = re.sub(r'[{}]'.format(string.punctuation), '', partial)
-            
+
             # Split names into words and compare sets of words
             name_words = set(name_no_punct.lower().split())
             partial_words = set(partial_no_punct.lower().split())
             if partial_words.issubset(name_words):
                 matching_data.append(item)
         return matching_data
+
 
 if __name__ == "__main__":
     pass
