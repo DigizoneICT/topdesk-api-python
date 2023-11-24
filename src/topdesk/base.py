@@ -1,10 +1,11 @@
 import base64
 import re
+from . import _asset
+from . import _change
 from . import _incident
+from . import _operator
 from . import _person
 from . import _utils
-from . import _operator
-from . import _asset
 
 
 # from .incident import incident
@@ -17,9 +18,10 @@ class connect:
                             (topdesk_username + ':'
                              + topdesk_password).encode("utf-8"))).decode("utf-8")
         self._partial_content_container = []
+        self.asset = _asset.asset(self._topdesk_url, self._credpair)
+        self.change = _change.change(self._topdesk_url, self._credpair)
         self.incident = _incident.incident(self._topdesk_url, self._credpair)
         self.person = _person.person(self._topdesk_url, self._credpair)
-        self.asset = _asset.asset(self._topdesk_url, self._credpair)
         self.utils = _utils.utils(self._topdesk_url, self._credpair)
         self.department = self._department(self._topdesk_url, self._credpair)
         self.branche = self._branche(self._topdesk_url, self._credpair)
