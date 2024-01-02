@@ -14,18 +14,18 @@ class change:
 
     def get_list(self, archived=None, page_size=1000, query=None, templateId=None, fields=None):
         return self.utils.handle_topdesk_response(
-                self.utils.request_topdesk("/tas/api/operatorChanges/", page_size, query, fields))
+                self.utils.request_topdesk(
+                    "/tas/api/operatorChanges/", archived, page_size, query, templateId, fields))
 
     def create(self, **kwargs):
         return self.utils.handle_topdesk_response(
                 self.utils.post_to_topdesk(
-                    "/tas/api/assetmgmt/operatorChanges", (self.utils.add_id_jsonbody(**kwargs))))
+                    "/tas/api/operatorChanges", (self.utils.add_id_jsonbody(**kwargs))))
 
-    def update(self, change, **kwargs):
+    def update(self, change, data):
         return self.utils.handle_topdesk_response(
-                self.utils.post_to_topdesk(
-                    "/tas/api/operatorChanges/{}".format(change),
-                    self.utils.add_id_jsonbody(**kwargs)))
+                self.utils.patch_to_topdesk(
+                    "/tas/api/operatorChanges/{}".format(change), data))
 
     def cancel(self, change, **kwargs):
         return self.utils.handle_topdesk_response(

@@ -45,6 +45,17 @@ class asset:
                 self.utils.put_to_topdesk(
                     "/tas/api/assetmgmt/assets/{}/assignments".format(asset_id), assignment))
 
+    def linkTask(self, **kwargs):
+        return self.utils.handle_topdesk_response(
+                self.utils.post_to_topdesk(
+                    "/tas/api/assetmgmt/assets/linkedTask",
+                    (self.utils.add_id_jsonbody(**kwargs))))
+
+    def upload(self, asset_id, filename, content):
+        return self.utils.handle_topdesk_response(
+                self.utils.upload_to_topdesk(
+                    "/tas/api/assetmgmt/uploads/?assetId={}".format(asset_id), filename, content))
+
 
 if __name__ == "__main__":
     pass

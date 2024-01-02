@@ -1,3 +1,4 @@
+from requests_toolbelt import MultipartEncoder
 import json
 import logging
 import re
@@ -32,7 +33,6 @@ class utils:
     def handle_topdesk_response(self, response):
         logging.debug(response.status_code)
         if response.status_code == 200 or response.status_code == 201:
-            # response = response.json()
             if not self._partial_content_container:
                 if response.text == "":
                     return "Success"
@@ -42,7 +42,6 @@ class utils:
                     else:
                         return json.loads(response.content.decode('utf-8'))
 
-                    # return json.loads(response.content.decode('utf-8'))
             else:
                 self._partial_content_container.extend(response.json()["dataSet"])
                 placeHolder = self._partial_content_container
@@ -50,13 +49,13 @@ class utils:
                 return placeHolder
         elif response.status_code == 404:
             logging.error("status_code {}, message: {}".format('404', 'Not Found'))
-            return
-        elif response.status_code == 204:
-            logging.error("status_code {}, message: {}".format('204', 'No content'))
-            return "success"
+            return "error"
         elif response.status_code == 405:
             logging.error("status_code {}, message: {}".format('405', 'Method not allowed'))
-            return
+            return "error"
+        elif response.status_code == 204:
+            logging.debug("status_code {}, message: {}".format('204', 'No content'))
+            return "success"
         # Partial content returned.
         elif response.status_code == 206:
             # can we make this recursive?
@@ -84,8 +83,13 @@ class utils:
             status_code = response.status_code
             response = json.loads(response.content.decode('utf-8'))
             if 'errors' in response:
-                logging.error("status_code {}, message: {}".format(
-                                status_code, response['errors'][0]['message']))
+                if 'errorCode' in response['errors'][0]:
+                    logging.error("errorCode {}, appliesTo: {}".format(
+                                    response['errors'][0]['errorCode'],
+                                    response['errors'][0]['appliesTo']))
+                else:
+                    logging.error("status_code {}, message: {}".format(
+                                    status_code, response['errors'][0]['message']))
             else:
                 logging.error("status_code {}, message: {}".format(
                                 status_code, response[0]['message']))
@@ -128,6 +132,7 @@ class utils:
 
     def post_to_topdesk(self, uri, json_body):
         logging.debug(uri)
+        logging.debug(json_body)
         headers = {'Authorization': "Basic {}".format(self._credpair),
                    'Accept': 'application/json',
                    'Content-type': 'application/json'}
@@ -140,12 +145,32 @@ class utils:
                    'Content-type': 'application/json'}
         return requests.put(self._topdesk_url + uri, headers=headers, json=json_body)
 
+    def patch_to_topdesk(self, uri, json_body):
+        logging.debug(uri)
+        headers = {'Authorization': "Basic {}".format(self._credpair),
+                   'Accept': 'application/json',
+                   'Content-type': 'application/json-patch+json'}
+        return requests.patch(self._topdesk_url + uri, headers=headers, json=json_body)
+
     def delete_from_topdesk(self, uri, json_body):
         logging.debug(uri)
         headers = {'Authorization': "Basic {}".format(self._credpair),
                    'Accept': 'application/json',
                    'Content-type': 'application/json'}
         return requests.delete(self._topdesk_url + uri, headers=headers, json=json_body)
+
+    def upload_to_topdesk(self, uri, filename, content):
+        logging.debug(uri)
+
+        m = MultipartEncoder(
+            fields={'file': (filename, content, 'application/zip')}
+        )
+
+        headers = {'Authorization': "Basic {}".format(self._credpair),
+                   'Accept': "application/json",
+                   'Content-type': m.content_type}
+
+        return requests.post(self._topdesk_url + uri, headers=headers, data=m)
 
     def add_id_list(self, id_list):
         param = []
@@ -173,6 +198,11 @@ class utils:
                 if key == 'caller':
                     continue
                 request_body[key] = kwargs[key]
+
+        if 'taskId' in kwargs:
+            if self.is_valid_uuid(kwargs['taskId']):
+                request_body['taskId'] = kwargs['taskId']
+
         return request_body
 
     def find_partial_match_company(self, data, partial):
