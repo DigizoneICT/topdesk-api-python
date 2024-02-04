@@ -20,13 +20,19 @@ class asset:
     def create(self, **kwargs):
         return self.utils.handle_topdesk_response(
                 self.utils.post_to_topdesk(
-                    "/tas/api/assetmgmt/assets", (self.utils.add_id_jsonbody(**kwargs))))
+                    "/tas/api/assetmgmt/assets", (self.utils.json_body_without_id(**kwargs))))
 
     def update(self, asset, **kwargs):
         return self.utils.handle_topdesk_response(
                 self.utils.post_to_topdesk(
                     "/tas/api/assetmgmt/assets/{}".format(asset),
-                    self.utils.add_id_jsonbody(**kwargs)))
+                    self.utils.json_body_without_id(**kwargs)))
+
+    def delete(self, **kwargs):
+        return self.utils.handle_topdesk_response(
+                self.utils.post_to_topdesk(
+                    "/tas/api/assetmgmt/assets/delete",
+                    self.utils.json_body_without_id(**kwargs)))
 
     def archive(self, asset_id, reason_id=None):
         if reason_id:
@@ -45,6 +51,22 @@ class asset:
                 self.utils.put_to_topdesk(
                     "/tas/api/assetmgmt/assets/{}/assignments".format(asset_id), assignment))
 
+    def getAssignments(self, asset_id):
+        return self.utils.handle_topdesk_response(
+                self.utils.request_topdesk(
+                    "/tas/api/assetmgmt/assets/{}/assignments".format(asset_id)))
+
+    def deleteAssignment(self, asset_id, linkId):
+        return self.utils.handle_topdesk_response(
+                self.utils.delete_from_topdesk(
+                    "/tas/api/assetmgmt/assets/{}/assignments/{}".format(asset_id, linkId)))
+
+    def linkService(self, **kwargs):
+        return self.utils.handle_topdesk_response(
+                self.utils.post_to_topdesk(
+                    "/tas/api/assetmgmt/assets/linkedService",
+                    (self.utils.json_body_without_id(**kwargs))))
+
     def linkTask(self, **kwargs):
         return self.utils.handle_topdesk_response(
                 self.utils.post_to_topdesk(
@@ -55,6 +77,11 @@ class asset:
         return self.utils.handle_topdesk_response(
                 self.utils.upload_to_topdesk(
                     "/tas/api/assetmgmt/uploads/?assetId={}".format(asset_id), filename, content))
+
+    def getDropdownOptions(self, fieldId):
+        return self.utils.handle_topdesk_response(
+                self.utils.request_topdesk(
+                    "/tas/api/assetmgmt/dropdowns/{}/?field=name".format(fieldId)))
 
 
 if __name__ == "__main__":

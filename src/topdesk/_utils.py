@@ -1,4 +1,5 @@
 from requests_toolbelt import MultipartEncoder
+from collections import namedtuple
 import json
 import logging
 import re
@@ -31,14 +32,22 @@ class utils:
             return
 
     def handle_topdesk_response(self, response):
-        logging.debug(response.status_code)
+        logging.info('URL: ' + response.url
+                     + ' Status code: ' + str(response.status_code)
+                     + ' Headers: ' + str(response.headers))
+
+        returnFormatError = namedtuple("response", ("error", "status_code", "body"))
+
         if response.status_code == 200 or response.status_code == 201:
             if not self._partial_content_container:
+
                 if response.text == "":
                     return "Success"
                 else:
                     if "dataSet" in response.json():
                         return response.json()["dataSet"]
+                    elif "results" in response.json():
+                        return response.json()["results"]
                     else:
                         return json.loads(response.content.decode('utf-8'))
 
@@ -46,13 +55,14 @@ class utils:
                 self._partial_content_container.extend(response.json()["dataSet"])
                 placeHolder = self._partial_content_container
                 self._partial_content_container = []
+
                 return placeHolder
         elif response.status_code == 404:
             logging.error("status_code {}, message: {}".format('404', 'Not Found'))
-            return "error"
+            return returnFormatError(True, response.status_code, "Not Found")
         elif response.status_code == 405:
             logging.error("status_code {}, message: {}".format('405', 'Method not allowed'))
-            return "error"
+            return returnFormatError(True, response.status_code, "Method not allowed")
         elif response.status_code == 204:
             logging.debug("status_code {}, message: {}".format('204', 'No content'))
             return "success"
@@ -78,8 +88,6 @@ class utils:
             return self.handle_topdesk_response(self.request_topdesk(partial_new_url))
         else:
             # general failure
-            logging.error(response.status_code)
-            logging.error(response.content)
             status_code = response.status_code
             response = json.loads(response.content.decode('utf-8'))
             if 'errors' in response:
@@ -92,10 +100,9 @@ class utils:
                                     status_code, response['errors'][0]['message']))
             else:
                 logging.error("status_code {}, message: {}".format(
-                                status_code, response[0]['message']))
+                                status_code, response))
 
-            # return {"status_code" : status_code, "message" : response['errors'][0]['message']}
-            return
+            return returnFormatError(True, status_code, response)
 
     def request_topdesk(self, uri, archived=None, page_size=None, query=None, templateId=None,
                         fields=None, custom_uri=None, extended_uri=None):
@@ -152,7 +159,7 @@ class utils:
                    'Content-type': 'application/json-patch+json'}
         return requests.patch(self._topdesk_url + uri, headers=headers, json=json_body)
 
-    def delete_from_topdesk(self, uri, json_body):
+    def delete_from_topdesk(self, uri, json_body=None):
         logging.debug(uri)
         headers = {'Authorization': "Basic {}".format(self._credpair),
                    'Accept': 'application/json',
@@ -203,6 +210,12 @@ class utils:
             if self.is_valid_uuid(kwargs['taskId']):
                 request_body['taskId'] = kwargs['taskId']
 
+        return request_body
+
+    def json_body_without_id(self, **kwargs):
+        request_body = {}
+        for key in kwargs:
+            request_body[key] = kwargs[key]
         return request_body
 
     def find_partial_match_company(self, data, partial):
