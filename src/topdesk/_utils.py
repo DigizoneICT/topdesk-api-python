@@ -52,7 +52,10 @@ class utils:
                         return json.loads(response.content.decode('utf-8'))
 
             else:
-                self._partial_content_container.extend(response.json()["dataSet"])
+                if "dataSet" in response.json():
+                    self._partial_content_container.extend(response.json()["dataSet"])
+                else:
+                    self._partial_content_container.extend(response.json())
                 placeHolder = self._partial_content_container
                 self._partial_content_container = []
 
@@ -69,7 +72,10 @@ class utils:
         # Partial content returned.
         elif response.status_code == 206:
             # can we make this recursive?
-            self._partial_content_container.extend(response.json()["dataSet"])
+            if "dataSet" in response.json():
+                self._partial_content_container.extend(response.json()["dataSet"])
+            else:
+                self._partial_content_container.extend(response.json())
 
             # Page size none crashes here.
             page_size = int(re.findall(r'page_size=(\d+)', response.url)[0])
